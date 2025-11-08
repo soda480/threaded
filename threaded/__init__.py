@@ -1,3 +1,4 @@
+import time
 import threading
 import logging
 from collections import defaultdict
@@ -17,6 +18,7 @@ class Threaded:
         self._active = set()
         self._completed = threading.Event()
         self._executor = None
+        self._timing = {'stime': None, 'etime': None}
 
     def _get_name(self, obj):
         if isinstance(obj, str):
@@ -75,6 +77,7 @@ class Threaded:
         return cands
 
     def start(self):
+        self._timing['stime'] = time.time()
         with ThreadPoolExecutor(max_workers=self._workers, thread_name_prefix='thread') as executor:
             self._executor = executor
             logger.info(f'starting thread pool with {self._workers} threads')
@@ -82,6 +85,9 @@ class Threaded:
                 self._submit(name)
             self._completed.wait()
             logger.info('all work completed')
+        self._timing['etime'] = time.time()
+        duration = self._timing['etime'] - self._timing['stime']
+        logger.info(f'duration: {duration:.2f}s')
     
     def _submit(self, name):
         logger.debug(f'submitting {name} to thread pool')

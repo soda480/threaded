@@ -1,26 +1,8 @@
-import sys
-import random
-import time
 import logging
 from threaded import Threaded
+from common import configure_logging, runit
 
 logger = logging.getLogger(__name__)
-
-def configure_logging(level=logging.DEBUG):
-    rlogger = logging.getLogger()
-    rlogger.setLevel(level)
-
-    shandler = logging.StreamHandler(stream=sys.stderr)
-    sformatter = logging.Formatter("%(asctime)s %(threadName)s %(levelname)s [%(funcName)s]: %(message)s")
-    shandler.setFormatter(sformatter)
-    shandler.setLevel(level)
-    rlogger.addHandler(shandler)
-
-def runit(name):
-    sleep = random.uniform(3, 12)
-    logger.debug(f'{name} running - sleeping {sleep:.2f}s')
-    time.sleep(sleep)
-    logger.info(f'{name} completed')
 
 class Item():
     def __init__(self, name):
@@ -31,7 +13,7 @@ class Item():
         return f'Item({self.name})'
 
 def main():
-    threaded = Threaded(workers=4)
+    threaded = Threaded(workers=5)
     threaded.register(Item('i01'))
     threaded.register(Item('i02'))
     threaded.register(Item('i03'))
@@ -50,11 +32,7 @@ def main():
     threaded.register(Item('i16'), after=['i12'])
     threaded.register(Item('i17'), after=['i16'])
 
-    stime = time.time()
     threaded.start()
-    etime = time.time()
-    duration = etime - stime
-    print(f'duration: {duration:.2f}s')
 
 if __name__ == '__main__':
     configure_logging()
