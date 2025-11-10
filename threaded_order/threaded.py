@@ -63,7 +63,21 @@ class ThreadedOrder:
         return decorator
 
     def _has_cycle(self):
-        pass
+        visited = set()
+        stack = set()
+        def visit(node):
+            if node in stack:
+                return True
+            if node in visited:
+                return False
+            visited.add(node)
+            stack.add(node)
+            for neighbor in self._dgraph[node]:
+                if visit(neighbor):
+                    return True
+            stack.remove(node)
+            return False
+        return any(visit(node) for node in self._objs)
 
     def _unregister(self, rname):
         logger = logging.getLogger(threading.current_thread().name)
