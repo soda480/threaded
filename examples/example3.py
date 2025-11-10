@@ -1,4 +1,4 @@
-from threaded import Threaded
+from threaded_order import ThreadedOrder
 from common import runit
 
 def i01():
@@ -54,7 +54,7 @@ def i17():
 
 
 def main():
-    threaded = Threaded(workers=5)
+    threaded = ThreadedOrder(workers=5, setup_logging=True)
     threaded.register(i01)
     threaded.register(i02)
     threaded.register(i03)

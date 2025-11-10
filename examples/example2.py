@@ -1,4 +1,4 @@
-from threaded import Threaded
+from threaded_order import ThreadedOrder
 from common import runit
 
 class Item():
@@ -10,7 +10,7 @@ class Item():
         return f'Item({self.name})'
 
 def main():
-    threaded = Threaded(workers=5)
+    threaded = ThreadedOrder(workers=5, setup_logging=True)
     threaded.register(Item('i01'))
     threaded.register(Item('i02'))
     threaded.register(Item('i03'))

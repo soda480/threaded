@@ -1,10 +1,10 @@
 import random
 import time
-import threading
-import logging
+from threaded_order import ThreadProxyLogger
+
+logger = ThreadProxyLogger()
 
 def runit(name):
-    logger = logging.getLogger(threading.current_thread().name)
     sleep = random.uniform(3, 12)
     logger.debug(f'{name} running - sleeping {sleep:.2f}s')
     time.sleep(sleep)

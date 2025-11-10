@@ -1,8 +1,7 @@
-from threaded import Threaded
+from threaded_order import ThreadedOrder
 from common import runit
 
-workers = 5
-threaded = Threaded(workers=workers)
+threaded = ThreadedOrder(workers=5, setup_logging=True)
 
 @threaded.dregister()
 def i01():

@@ -1,3 +1,4 @@
+import os
 import time
 import threading
 import logging
@@ -6,9 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from .logger import configure_logging
 
-class Threaded:
+class ThreadedOrder:
+    max_workers = min(8, os.cpu_count())
 
-    def __init__(self, workers=4):
+    def __init__(self, workers=max_workers, setup_logging=False):
         self._workers = workers
         self._objs = {}
         self._dgraph = defaultdict(list)
@@ -17,9 +19,10 @@ class Threaded:
         self._completed = threading.Event()
         self._executor = None
         self._timing = {'stime': None, 'etime': None}
-        main_thread_name = 'thread_M'
-        threading.current_thread().name = main_thread_name
-        configure_logging(workers, main_thread=main_thread_name)
+        if setup_logging:
+            main_thread_name = 'thread_M'
+            threading.current_thread().name = main_thread_name
+            configure_logging(workers, main_thread=main_thread_name)
 
     def _get_name(self, obj):
         if callable(obj):
@@ -28,7 +31,7 @@ class Threaded:
             if not hasattr(obj, 'run'):
                 raise ValueError('object must have .run method that is callable')
             return obj.name
-        raise ValueError(f'object must be callable or have .name attribute')
+        raise ValueError('object must be callable or have .name attribute')
 
     def register(self, obj, after=None):
         logger = logging.getLogger(threading.current_thread().name)
@@ -86,8 +89,7 @@ class Threaded:
             return f"{message} {', '.join(found)}"
         logger = logging.getLogger(threading.current_thread().name)
         cands = [
-            name for name, deps in self._dgraph.items()
-                if not deps and name not in self._active]
+            name for name, deps in self._dgraph.items() if not deps and name not in self._active]
         cands = cands[:number]
         logger.debug(f'requested {number} {_get_msg(cands)}')
         return cands
@@ -105,7 +107,7 @@ class Threaded:
         self._timing['etime'] = time.time()
         duration = self._timing['etime'] - self._timing['stime']
         logger.info(f'duration: {duration:.2f}s')
-    
+
     def _submit(self, name):
         logger = logging.getLogger(threading.current_thread().name)
         logger.debug(f'submitting {name} to thread pool')
@@ -137,8 +139,7 @@ class Threaded:
         else:
             self._objs[name].run()
         return name
-    
+
     def __repr__(self):
         rstr = '\n'.join([f'{name}: {deps}' for name, deps in self._dgraph.items()])
         return f'Dependency Graph:\n{rstr}'
-
