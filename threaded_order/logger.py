@@ -7,17 +7,18 @@ class ThreadProxyLogger:
     def __getattr__(self, name):
         return getattr(logging.getLogger(threading.current_thread().name), name)
 
-def configure_logging(workers, prefix='thread', main_thread='thread_M'):
-    shandler = logging.StreamHandler()
-    shandler.setLevel(logging.INFO)
-    shandler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s [%(threadName)s]: %(message)s", "%Y-%m-%d %H:%M:%S"))
+def configure_logging(workers, prefix='thread', add_stream_handler=False):
+    if add_stream_handler:
+        shandler = logging.StreamHandler()
+        shandler.setLevel(logging.INFO)
+        shandler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s [%(threadName)s]: %(message)s", "%Y-%m-%d %H:%M:%S"))
 
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-    root.handlers.clear()
-    root.addHandler(shandler)
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+        root.handlers.clear()
+        root.addHandler(shandler)
 
     base = os.path.splitext(os.path.basename(sys.argv[0]))[0]
     formatter = logging.Formatter(
@@ -39,6 +40,6 @@ def configure_logging(workers, prefix='thread', main_thread='thread_M'):
         logger.setLevel(logging.DEBUG)
         return logger
 
-    add_handler(main_thread)
+    add_handler(threading.current_thread().name)
     for index in range(workers):
         add_handler(f'{prefix}_{index}')

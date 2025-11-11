@@ -17,7 +17,8 @@ def i05():
     runit(i05.__name__)
 
 def i06():
-    runit(i06.__name__)
+    # runit(i06.__name__)
+    raise Exception('error with i06')
 
 def i07():
     runit(i07.__name__)
@@ -54,7 +55,7 @@ def i17():
 
 
 def main():
-    threaded = ThreadedOrder(workers=5, setup_logging=True)
+    threaded = ThreadedOrder(workers=5, setup_logging=True, add_stream_handler=False)
     threaded.register(i01)
     threaded.register(i02)
     threaded.register(i03)

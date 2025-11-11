@@ -10,40 +10,35 @@ from .logger import configure_logging
 class ThreadedOrder:
     max_workers = min(8, os.cpu_count())
 
-    def __init__(self, workers=max_workers, setup_logging=False):
+    def __init__(self, workers=max_workers, setup_logging=False, add_stream_handler=True):
         self._workers = workers
-        self._objs = {}
+        self._run_map = {}
         self._dgraph = defaultdict(list)
         self._lock = threading.Lock()
         self._active = set()
         self._completed = threading.Event()
         self._executor = None
         self._timing = {'stime': None, 'etime': None}
+        threading.current_thread().name = 'thread_M'
         if setup_logging:
-            main_thread_name = 'thread_M'
-            threading.current_thread().name = main_thread_name
-            configure_logging(workers, main_thread=main_thread_name)
+            configure_logging(workers, add_stream_handler=add_stream_handler)
 
     def _get_name(self, obj):
         if callable(obj):
             return obj.__name__
-        if hasattr(obj, 'name'):
-            if not hasattr(obj, 'run'):
-                raise ValueError('object must have .run method that is callable')
-            return obj.name
-        raise ValueError('object must be callable or have .name attribute')
+        raise ValueError('object must be callable')
 
-    def register(self, obj, after=None):
+    def register(self, obj, name=None, after=None):
         logger = logging.getLogger(threading.current_thread().name)
-        name = self._get_name(obj)
+        name = name or self._get_name(obj)
         logger.debug(f'add {name} dependent on {after}')
-        if name in self._objs:
+        if name in self._run_map:
             raise ValueError(f'{name} has already been added')
         after = after or []
-        unknowns = [name for name in after if name not in self._objs]
+        unknowns = [name for name in after if name not in self._run_map]
         if unknowns:
             raise ValueError(f'{name} depends on unknown {unknowns}')
-        self._objs[name] = obj
+        self._run_map[name] = obj
         self._dgraph[name] = []
         for dname in after:
             self._dgraph[name].append(dname)
@@ -56,7 +51,7 @@ class ThreadedOrder:
             def wrapper(*args, **kwargs):
                 return function(*args, **kwargs)
             # register at decoration time so start() can discover it
-            self.register(wrapper, after=after)
+            self.register(wrapper, name=function.__name__, after=after)
             # keep a pointer to the original
             wrapper.__original__ = function
             return wrapper
@@ -78,7 +73,7 @@ class ThreadedOrder:
                     return True
             stack.remove(node)
             return False
-        return any(visit(node) for node in self._objs)
+        return any(visit(node) for node in self._run_map)
 
     def _unregister(self, rname):
         logger = logging.getLogger(threading.current_thread().name)
@@ -139,6 +134,8 @@ class ThreadedOrder:
         with self._lock:
             self._active.discard(name)
         self._unregister(name)
+
+        # get next candidate to submit
         cands = self._get_cands(1)
         if cands:
             self._submit(cands[0])
@@ -149,10 +146,10 @@ class ThreadedOrder:
     def _run(self, name):
         logger = logging.getLogger(threading.current_thread().name)
         logger.debug(f'run {name}')
-        if callable(self._objs[name]):
-            self._objs[name]()
-        else:
-            self._objs[name].run()
+        try:
+            self._run_map[name]()
+        except Exception as error:
+            logger.error(f'{name} failed with error: {error}')
         return name
 
     def __repr__(self):
