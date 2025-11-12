@@ -53,6 +53,8 @@ class ThreadedOrder:
         self._failed = []
         # user callback fired when a task is about to start
         self._on_task_start = None
+        # user callback fired when a task is running on thread
+        self._on_task_run = None
         # user callback fired when a task completes
         self._on_task_done = None
         # user callback fired when the scheduler begins execution
@@ -162,6 +164,10 @@ class ThreadedOrder:
             if kind == 'start':
                 name = payload
                 self._callback(self._on_task_start, name)
+
+            elif kind == 'run':
+                name, thread = payload
+                self._callback(self._on_task_run, name, thread)
 
             elif kind == 'done':
                 name, ok, error_type, error = payload
@@ -341,7 +347,10 @@ class ThreadedOrder:
     def _run(self, name):
         """ execute a task callable, capture errors, and return its result tuple
         """
-        logger = logging.getLogger(threading.current_thread().name)
+        thread = threading.current_thread().name
+        logger = logging.getLogger(thread)
+        payload = (name, thread)
+        self._events.put(('run', payload))
         logger.debug(f'run {name!r}')
         ok = True
         error_type = None
@@ -382,6 +391,11 @@ class ThreadedOrder:
         """ register callback fired when a task is about to start
         """
         self._on_task_start = (function, args, kwargs)
+
+    def on_task_run(self, function, *args, **kwargs):
+        """ register callback fired when a task is running on thread
+        """
+        self._on_task_run = (function, args, kwargs)
 
     def on_task_done(self, function, *args, **kwargs):
         """ register callback fired when a task finishes execution

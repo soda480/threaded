@@ -1,6 +1,7 @@
 import json
 from threaded_order import ThreadedOrder
 from common import runit
+from list2term import Lines
 
 def i01():
     runit(i01.__name__)
@@ -18,7 +19,6 @@ def i05():
     runit(i05.__name__)
 
 def i06():
-    # runit(i06.__name__)
     raise Exception('error with i06')
 
 def i07():
@@ -54,12 +54,12 @@ def i16():
 def i17():
     runit(i17.__name__)
 
+def update(name, thread, lines):
+    lines.write(f'{thread}->{thread} running {name}')
+
 def main():
+
     threaded = ThreadedOrder(workers=5, setup_logging=True, add_stream_handler=False)
-    threaded.on_task_start(lambda n: print("[start]", n))
-    threaded.on_task_done(lambda n, ok: print("[done ]", n, ok))
-    threaded.on_scheduler_start(lambda info: print(f"Starting {info['total_tasks']} tasks across a {info['workers']} pool"))
-    threaded.on_scheduler_done(lambda s: print(json.dumps(s, indent=2)))
     threaded.register(i01, 'i01')
     threaded.register(i02, 'i02')
     threaded.register(i03, 'i03')
@@ -77,7 +77,10 @@ def main():
     threaded.register(i15, 'i15', after=['i09'])
     threaded.register(i16, 'i16', after=['i12'])
     threaded.register(i17, 'i17', after=['i16'])
-    threaded.start()
+    lookup = ['thread_0', 'thread_1', 'thread_2', 'thread_3', 'thread_4']
+    with Lines(lookup=lookup) as lines:
+        threaded.on_task_run(update, lines)
+        threaded.start()
 
 if __name__ == '__main__':
     main()
